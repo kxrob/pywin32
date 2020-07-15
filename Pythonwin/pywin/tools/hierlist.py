@@ -216,6 +216,7 @@ class HierList(object.Object):
 				hold = old_handles[iold]
 				if hold in self.filledItemHandlesMap:
 					self.Refresh(hold)
+				hAfter = old_handles[iold]
 			else:
 				# Remove the deleted items.
 #				print "Deleting %d (%s)" % (iold, old_items[iold])
@@ -226,7 +227,6 @@ class HierList(object.Object):
 					if hchild in self.filledItemHandlesMap:
 						del self.filledItemHandlesMap[hchild]
 				self.listControl.DeleteItem(hdelete)
-			hAfter = old_handles[iold]
 		# Fill any remaining new items:
 		for newItem in new_items[inew:]:
 #			print "Inserting new item", newItem

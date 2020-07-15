@@ -170,7 +170,15 @@ class ScintillaControlInterface:
 	def SCIMarkerSetBack(self, markerNum, back):
 		self.SendScintilla(scintillacon.SCI_MARKERSETBACK, markerNum, back)
 	def SCIMarkerAdd(self, lineNo, markerNum):
-		self.SendScintilla(scintillacon.SCI_MARKERADD, lineNo, markerNum)
+		return self.SendScintilla(scintillacon.SCI_MARKERADD, lineNo, markerNum)
+	def SCIMarkerLineFromHandle(self, h):
+		#SCI_MARKERLINEFROMHANDLE(int markerHandle) -> int
+		return self.SendScintilla(scintillacon.SCI_MARKERLINEFROMHANDLE, h)
+	def SCIMarkerHandleFromLine(self, lineNo, which=0):
+		#SCI_MARKERHANDLEFROMLINE(line line, int which) -> int
+		#SCI_MARKERHANDLEFROMLINE = 2732
+		raise NotImplementedError("will be available soon?")
+		return self.SendScintilla(scintillacon.SCI_MARKERHANDLEFROMLINE, lineNo, which)
 	def SCIMarkerDelete(self, lineNo, markerNum):
 		self.SendScintilla(scintillacon.SCI_MARKERDELETE, lineNo, markerNum)
 	def SCIMarkerDeleteAll(self, markerNum=-1):
@@ -179,6 +187,8 @@ class ScintillaControlInterface:
 		return self.SendScintilla(scintillacon.SCI_MARKERGET, lineNo)
 	def SCIMarkerNext(self, lineNo, markerNum):
 		return self.SendScintilla(scintillacon.SCI_MARKERNEXT, lineNo, markerNum)
+	def SCIMarkerPrev(self, lineNo, markerNum):
+		return self.SendScintilla(scintillacon.SCI_MARKERPREVIOUS, lineNo, markerNum)
 	def SCICancel(self):
 		self.SendScintilla(scintillacon.SCI_CANCEL)
 	# AutoComplete

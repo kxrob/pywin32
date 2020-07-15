@@ -147,38 +147,52 @@ class ConfigManager:
             except (IOError, EOFError):
                 pass # Ignore errors - may be read only.
 
+    ns = None
     def configure(self, editor, subsections = None):
         # Execute the extension code, and find any events.
         # First, we "recursively" connect any we are based on.
         if subsections is None: subsections = []
-        subsections = [''] + subsections
+        if '' not in subsections: subsections = [''] + subsections
+        ns = self.ns or {}  # cached one time execution for ns
         general = self.get_data("general")
         if general:
             parents = general.get("based on", [])
             for parent in parents:
                 trace("Configuration based on", parent, "- loading.")
                 parent = self.__class__(parent)
-                parent.configure(editor, subsections)
+                nsp = parent.configure(editor, subsections)
+                if self.ns is None:
+                    ns.update(nsp)
                 if parent.last_error:
                     self.report_error(parent.last_error)
 
         bindings = editor.bindings
         codeob = self.get_data("extension code")
-        if codeob is not None:
-            ns = {}
+        if self.ns is None and codeob:
+            ns['__file__'] = self.filename
             try:
-                exec codeob in ns
+                exec(codeob, ns, ns)
+                self.ns = ns
             except:
                 traceback.print_exc()
                 self.report_error("Executing extension code failed")
-                ns = None
-            if ns:
-                num = 0
-                for name, func in ns.items():
-                    if type(func)==types.FunctionType and name[:1] != '_':
-                        bindings.bind(name, func)
-                        num = num + 1
-                trace("Configuration Extension code loaded", num, "events")
+                ##ns.clear()  ## = None
+            
+            modname = '_pywin_' + os.path.basename(self.filename).replace('.', '_')
+            mod = types.ModuleType(modname)
+            # somehow a created module __dict__ is spooky regarding reusage (attrs None) so we force set ist
+            ns.update(mod.__dict__)
+            mod.__dict__.update(ns)
+            sys.modules[mod.__name__] = mod
+
+        if ns:
+            num = 0
+            for name, func in ns.items():
+                if type(func)==types.FunctionType and name[:1] != '_':
+                    bindings.bind(name, func)
+                    num = num + 1
+            trace("Configuration Extension code loaded", num, "events")
+        
         # Load the idle extensions
         for subsection in subsections:
             for ext in self.get_data("idle extensions", {}).get(subsection, []):
@@ -196,6 +210,7 @@ class ConfigManager:
             bindings.update_keymap(keymap)
             num_bound = num_bound + len(keymap)
         trace("Configuration bound", num_bound, "keys")
+        return ns
 
     def get_key_binding(self, event, subsections = None):
         if subsections is None: subsections = []
@@ -289,8 +304,8 @@ class ConfigManager:
                 "".join(lines), self.filename, "exec")
             self._save_data("extension code", c)
         except SyntaxError, details:
-            errlineno = details.lineno + start_lineno
-            # Should handle syntax errors better here, and offset the lineno.
+            errlineno = details.lineno
+            traceback.print_exc()
             self.report_error("Compiling extension code failed:\r\nFile: %s\r\nLine %d\r\n%s" \
                               % (details.filename, errlineno, details.msg))
         return line, lineno

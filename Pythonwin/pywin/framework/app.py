@@ -158,6 +158,15 @@ class CApp(WinApp):
 		AppBuilder = None
 		return 0
 
+	def CallAfter(self, func, *args, **kw):
+		# execute `func` after pending messages have been handled - like
+		# wx.CallAfter
+		def _ca_handler(handler, count):
+			try: func(*args, **kw)
+			finally:
+				self.DeleteIdleHandler(_ca_handler)
+		self.AddIdleHandler(_ca_handler)
+		return _ca_handler
 	def HaveIdleHandler(self, handler):
 		return handler in self.idleHandlers
 	def AddIdleHandler(self, handler):
@@ -181,7 +190,7 @@ class CApp(WinApp):
 						pass
 					thisRet = 0
 				ret = ret or thisRet
-			return ret
+			return ret	# Nonzero to receive more idle processing time
 		except KeyboardInterrupt:
 			pass
 	def CreateMainFrame(self):
