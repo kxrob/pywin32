@@ -4,6 +4,7 @@ on:
   push:
     branches:
     - master
+    - _startup_testCI
   pull_request:
     branches:
     - master
