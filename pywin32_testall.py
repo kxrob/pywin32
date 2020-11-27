@@ -16,18 +16,29 @@ def run_test(script, cmdline_rest=""):
     # some tests prefer to be run from their directory.
     cmd = [sys.executable, "-u", scriptname] + cmdline_rest.split()
     print(script)
-    popen = subprocess.Popen(cmd, shell=True, cwd=dirname,
+    popen = subprocess.Popen(cmd, shell=True, cwd=dirname or '.',
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    data = popen.communicate()[0]
-    if sys.version_info > (3,):
-        sys.stdout.write(data.decode('latin-1'))
-    else:
-        sys.stdout.write(data)
-    sys.stdout.flush()
+##    data = popen.communicate()[0]
+##    if sys.version_info > (3,):
+##        sys.stdout.write(data.decode('latin-1'))
+##    else:
+##        sys.stdout.write(data)
+##    sys.stdout.flush()
+
+    rc = stream_lines(popen)
     if popen.returncode:
         print("****** %s failed: %s" % (script, popen.returncode))
         sys.exit(popen.returncode)
 
+def stream_lines(popen):
+    while 1:
+        line = popen.stdout.readline().decode('latin-1')
+        print(line, end='')
+        sys.stdout.flush()  # check with and w/o
+        if not line:
+            break
+    ##popen.stdout.close()
+    return popen.wait() 
 
 def find_and_run(possible_locations, script, cmdline_rest=""):
     for maybe in possible_locations:
