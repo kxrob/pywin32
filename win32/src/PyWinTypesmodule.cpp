@@ -674,6 +674,79 @@ PyObject *PyWinObject_FromRECT(LPRECT prect)
     return Py_BuildValue("llll", prect->left, prect->top, prect->right, prect->bottom);
 }
 
+#if PY_VERSION_HEX >= 0x030A0000
+/* We release the buffer right after use of this function which could
+   cause issues later on.  Don't use these functions in new code.
+ */
+int
+PyObject_CheckReadBuffer(PyObject *obj)
+{
+    PyBufferProcs *pb = Py_TYPE(obj)->tp_as_buffer;
+    Py_buffer view;
+
+    if (pb == NULL ||
+        pb->bf_getbuffer == NULL)
+        return 0;
+    if ((*pb->bf_getbuffer)(obj, &view, PyBUF_SIMPLE) == -1) {
+        PyErr_Clear();
+        return 0;
+    }
+    PyBuffer_Release(&view);
+    return 1;
+}
+
+static int
+as_read_buffer(PyObject *obj, const void **buffer, Py_ssize_t *buffer_len)
+{
+    Py_buffer view;
+
+    if (obj == NULL || buffer == NULL || buffer_len == NULL) {
+        //null_error();
+        PyErr_SetString(PyExc_SystemError,
+                        "null argument to internal routine");
+        return -1;
+    }
+    if (PyObject_GetBuffer(obj, &view, PyBUF_SIMPLE) != 0)
+        return -1;
+
+    *buffer = view.buf;
+    *buffer_len = view.len;
+    PyBuffer_Release(&view);
+    return 0;
+}
+
+int PyObject_AsReadBuffer(PyObject *obj,
+                          const void **buffer,
+                          Py_ssize_t *buffer_len)
+{
+    return as_read_buffer(obj, buffer, buffer_len);
+}
+
+int PyObject_AsWriteBuffer(PyObject *obj,
+                           void **buffer,
+                           Py_ssize_t *buffer_len)
+{
+    Py_buffer view;
+
+    if (obj == NULL || buffer == NULL || buffer_len == NULL) {
+        //null_error();
+        PyErr_SetString(PyExc_SystemError,
+                        "null argument to internal routine");
+        return -1;
+    }
+    if (PyObject_GetBuffer(obj, &view, PyBUF_WRITABLE) != 0) {
+        PyErr_SetString(PyExc_TypeError,
+                        "expected a writable bytes-like object");
+        return -1;
+    }
+
+    *buffer = view.buf;
+    *buffer_len = view.len;
+    PyBuffer_Release(&view);
+    return 0;
+}
+#endif
+
 // Buffer conversion functions that use DWORD for length
 BOOL PyWinObject_AsReadBuffer(PyObject *ob, void **buf, DWORD *buf_len, BOOL bNoneOk)
 {
