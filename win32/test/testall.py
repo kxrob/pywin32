@@ -149,7 +149,7 @@ def suite():
     excludes = [os.path.basename(me)]
     if sys.version_info[:2] == (3, 10) and sys.version_info.releaselevel == 'alpha':
         excludes += [
-            'test_win32trace.py',  # freezes (in test_win32trace.TestHugeChunks probably)
+            ##'test_win32trace.py',  # was freezing before PY_SSIZE_T_CLEAN fix
             ]
     files = os.listdir(os.path.dirname(me))
     suite = unittest.TestSuite()
