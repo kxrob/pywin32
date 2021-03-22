@@ -537,7 +537,7 @@ PyCFunction pfnPyInternetConnect = (PyCFunction)PyInternetConnect;
 %}
 %native (InternetConnect) pfnPyInternetConnect;
 
-// @pyswig |InternetOpen|Initializes an application's use of the Microsoft® Win32® Internet functions.
+// @pyswig |InternetOpen|Initializes an application's use of the Microsoftï¿½ Win32ï¿½ Internet functions.
 PyHINTERNET InternetOpen(
     TCHAR *lpszAgent, // @pyparm string|agent||A string that contains the name of the application
                       // or entity calling the Internet functions. This name is used as the user
@@ -638,7 +638,7 @@ PyObject *PyInternetCanonicalizeUrl(PyObject *self, PyObject *args)
     // canonicalization. This can be one of the following values:
     // @flag ICU_BROWSER_MODE|Does not encode or decode characters after "#" or "?", and does not remove trailing white space after "?". If this value is not specified, the entire URL is encoded and trailing white space is removed. 
     // @flag ICU_DECODE|Converts all %XX sequences to characters, including escape sequences, before the URL is parsed. 
-    // @flag ICU_ENCODE_PERCENT|Encodes any percent signs encountered. By default, percent signs are not encoded. This value is available in Microsoft® Internet Explorer 5 and later versions of the Win32® Internet functions. 
+    // @flag ICU_ENCODE_PERCENT|Encodes any percent signs encountered. By default, percent signs are not encoded. This value is available in Microsoftï¿½ Internet Explorer 5 and later versions of the Win32ï¿½ Internet functions. 
     // @flag ICU_ENCODE_SPACES_ONLY|Encodes spaces only. 
     // @flag ICU_NO_ENCODE|Does not convert unsafe characters to escape sequences. 
     // @flag ICU_NO_META|Does not remove meta sequences (such as "." and "..") from the URL. 
@@ -679,7 +679,7 @@ done:
 %native (InternetCanonicalizeUrl) PyInternetCanonicalizeUrl;
 
 %{
-// @pyswig int, string|InternetGetLastResponseInfo|Retrieves the last Win32® Internet function error description or server response on the thread calling this function.
+// @pyswig int, string|InternetGetLastResponseInfo|Retrieves the last Win32ï¿½ Internet function error description or server response on the thread calling this function.
 PyObject *PyInternetGetLastResponseInfo(PyObject *self, PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ":InternetGetLastResponseInfo"))
@@ -1745,8 +1745,8 @@ PyObject *PyCommitUrlCacheEntry(PyObject *self, PyObject *args, PyObject *kwargs
 			&obUrlName,				// @pyparm str|UrlName||The Url for which to create an entry
 			&obLocalFileName,		// @pyparm str|LocalFileName||Filename returned from <om win32inet.CreateUrlCacheEntry>.
 									//	Can be None when creating a history entry.
-			&obExpireTime,			// @pyparm <o PyTime>|ExpireTime|None|Time at which entry expires
-			&obLastModifiedTime,	// @pyparm <o PyTime>|LastModifiedTime|None|Modification time of URL
+			&obExpireTime,			// @pyparm <o PyDateTime>|ExpireTime|None|Time at which entry expires
+			&obLastModifiedTime,	// @pyparm <o PyDateTime>|LastModifiedTime|None|Modification time of URL
 			&CacheEntryType,		// @pyparm int|CacheEntryType|NORMAL_CACHE_ENTRY|Combination of *_CACHE_ENTRY flags
 			&obHeaderInfo,			// @pyparm str|HeaderInfo|None|Header data used to request Url
 			&obOriginalUrl))		// @pyparm str|OriginalUrl|None|If redirected, original site requested
