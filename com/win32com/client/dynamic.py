@@ -15,7 +15,6 @@ Example
  >>> xl.Visible = 1 # The Excel window becomes visible.
 
 """
-import sys
 import traceback
 import types
 
@@ -151,7 +150,7 @@ def Dispatch(
     return createClass(IDispatch, olerepr, userName, lazydata=lazydata)
 
 
-def MakeOleRepr(IDispatch, typeinfo, typecomp):
+def MakeOleRepr(IDispatch, typeinfo, lazydata):
     olerepr = None
     if typeinfo is not None:
         try:
@@ -167,7 +166,7 @@ def MakeOleRepr(IDispatch, typeinfo, typecomp):
                 href = typeinfo.GetRefTypeOfImplType(-1)
                 typeinfo = typeinfo.GetRefTypeInfo(href)
                 attr = typeinfo.GetTypeAttr()
-            if typecomp is None:
+            if lazydata is None:
                 olerepr = build.DispatchItem(typeinfo, attr, None, 0)
             else:
                 olerepr = build.LazyDispatchItem(attr, None)
@@ -203,7 +202,7 @@ class CDispatch:
         self.__dict__["_oleobj_"] = IDispatch
         self.__dict__["_username_"] = userName
         self.__dict__["_olerepr_"] = olerepr
-        self.__dict__["_mapCachedItems_"] = {}
+        ##self.__dict__["_mapCachedItems_"] = {}
         self.__dict__["_builtMethods_"] = {}
         self.__dict__["_enum_"] = None
         self.__dict__["_unicode_to_string_"] = None
@@ -440,9 +439,9 @@ class CDispatch:
     def _Release_(self):
         """Cleanup object - like a close - to force cleanup when you dont
         want to rely on Python's reference counting."""
-        for childCont in self._mapCachedItems_.values():
-            childCont._Release_()
-        self._mapCachedItems_ = {}
+        ##for childCont in self._mapCachedItems_.values():
+        ##    childCont._Release_()
+        ##self._mapCachedItems_ = {}
         if self._oleobj_:
             self._oleobj_.Release()
             self.__dict__["_oleobj_"] = None
@@ -551,28 +550,6 @@ class CDispatch:
         return self._oleobj_.GetIDsOfNames(0, attr)
 
     def __getattr__(self, attr):
-        if attr == "__iter__":
-            # We can't handle this as a normal method, as if the attribute
-            # exists, then it must return an iterable object.
-            try:
-                invkind = pythoncom.DISPATCH_METHOD | pythoncom.DISPATCH_PROPERTYGET
-                enum = self._oleobj_.InvokeTypes(
-                    pythoncom.DISPID_NEWENUM, LCID, invkind, (13, 10), ()
-                )
-            except pythoncom.com_error:
-                raise AttributeError("This object can not function as an iterator")
-            # We must return a callable object.
-            class Factory:
-                def __init__(self, ob):
-                    self.ob = ob
-
-                def __call__(self):
-                    import win32com.client.util
-
-                    return win32com.client.util.Iterator(self.ob)
-
-            return Factory(enum)
-
         if attr.startswith("_") and attr.endswith("_"):  # Fast-track.
             raise AttributeError(attr)
         # If a known method, create new instance and return.
@@ -611,13 +588,14 @@ class CDispatch:
                 except pythoncom.ole_error:
                     pass  # No prop by that name - retEntry remains None.
 
-        if retEntry is not None:  # see if in my cache
-            try:
-                ret = self._mapCachedItems_[retEntry.dispid]
-                debug_attr_print("Cached items has attribute!", ret)
-                return ret
-            except (KeyError, AttributeError):
-                debug_attr_print("Attribute %s not in cache" % attr)
+        # _mapCachedItems_ is not fed so far (with constants?)
+        ##if retEntry is not None:  # see if in my cache
+        ##    try:
+        ##        ret = self._mapCachedItems_[retEntry.dispid]
+        ##        debug_attr_print("Cached items has attribute!", ret)
+        ##        return ret
+        ##    except (KeyError, AttributeError):
+        ##        debug_attr_print("Attribute %s not in cache" % attr)
 
         # If we are still here, and have a retEntry, get the OLE item
         if retEntry is not None:
