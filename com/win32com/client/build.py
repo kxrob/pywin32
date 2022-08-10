@@ -153,6 +153,7 @@ class DispatchItem(OleItem):
 
     def __init__(self, typeinfo=None, attr=None, doc=None, bForUser=1):
         OleItem.__init__(self, doc)
+        self.getters = {}
         self.propMap = {}
         self.propMapGet = {}
         self.propMapPut = {}

@@ -203,7 +203,6 @@ class CDispatch:
         self.__dict__["_username_"] = userName
         self.__dict__["_olerepr_"] = olerepr
         ##self.__dict__["_mapCachedItems_"] = {}
-        self.__dict__["_builtMethods_"] = {}
         self.__dict__["_enum_"] = None
         self.__dict__["_unicode_to_string_"] = None
         self.__dict__["_lazydata_"] = lazydata
@@ -428,7 +427,7 @@ class CDispatch:
             )  # self.__dict__, self.__dict__
             name = methodName
             # Save the function in map.
-            fn = self._builtMethods_[name] = tempNameSpace[name]
+            fn = tempNameSpace[name]
             newMeth = MakeMethod(fn, self, self.__class__)
             return newMeth
         except:
@@ -550,13 +549,16 @@ class CDispatch:
         return self._oleobj_.GetIDsOfNames(0, attr)
 
     def __getattr__(self, attr):
-        if attr.startswith("_") and attr.endswith("_"):  # Fast-track.
-            raise AttributeError(attr)
-        # If a known method, create new instance and return.
         try:
-            return MakeMethod(self._builtMethods_[attr], self, self.__class__)
+            get = self._olerepr_.getters[attr]
         except KeyError:
             pass
+        else:
+            return get()
+
+        if attr.startswith("_") and attr.endswith("_"):  # Fast-track.
+            raise AttributeError(attr)
+
         # XXX - Note that we current are case sensitive in the method.
         # debug_attr_print("GetAttr called for %s on DispatchContainer %s" % (attr,self._username_))
         # First check if it is in the method map.  Note that an actual method
@@ -564,7 +566,9 @@ class CDispatch:
         # means we create the actual method object - which also means
         # this code will never be asked for that method name again.
         if attr in self._olerepr_.mapFuncs:
-            return self._make_method_(attr)
+            r = self._make_method_(attr)
+            self._olerepr_.getters[attr] = lambda: r
+            return r
 
         # Delegate to property maps/cached items
         retEntry = None
@@ -578,7 +582,9 @@ class CDispatch:
                 try:
                     if self.__LazyMap__(attr):
                         if attr in self._olerepr_.mapFuncs:
-                            return self._make_method_(attr)
+                            r = self._make_method_(attr)
+                            self._olerepr_.getters[attr] = lambda: r
+                            return r
                         retEntry = self._olerepr_.propMap.get(attr)
                         if retEntry is None:
                             retEntry = self._olerepr_.propMapGet.get(attr)
@@ -603,24 +609,34 @@ class CDispatch:
             debug_attr_print(
                 "Getting property Id 0x%x from OLE object" % retEntry.dispid
             )
-            try:
-                ret = self._oleobj_.Invoke(retEntry.dispid, 0, invoke_type, 1)
-            except pythoncom.com_error as details:
-                if details.hresult in ERRORS_BAD_CONTEXT:
-                    # May be a method.
-                    self._olerepr_.mapFuncs[attr] = retEntry
-                    return self._make_method_(attr)
-                raise
-            debug_attr_print("OLE returned ", ret)
-            return self._get_good_object_(ret)
+
+            def _get():
+                try:
+                    ret = self._oleobj_.Invoke(retEntry.dispid, 0, invoke_type, 1)
+                except pythoncom.com_error as details:
+                    if details.hresult in ERRORS_BAD_CONTEXT:
+                        # May be a method.
+                        self._olerepr_.mapFuncs[attr] = retEntry
+                        r = self._make_method_(attr)
+                        self._olerepr_.getters[attr] = lambda: r
+                        return r
+                    raise
+                debug_attr_print("OLE returned ", ret)
+                return self._get_good_object_(ret)
+
+            self._olerepr_.getters[attr] = _get
+            return _get()
 
         # no where else to look.
-        raise AttributeError("%s.%s" % (self._username_, attr))
+        def _get_attrerr():
+            raise AttributeError("%s.%s" % (self._username_, attr))
+
+        self._olerepr_.getters[attr] = _get_attrerr
+        return _get_attrerr()
 
     def __setattr__(self, attr, value):
-        if (
-            attr in self.__dict__
-        ):  # Fast-track - if already in our dict, just make the assignment.
+        if attr in self.__dict__:
+            # Fast-track - if already in our dict, just make the assignment.
             # XXX - should maybe check method map - if someone assigns to a method,
             # it could mean something special (not sure what, tho!)
             self.__dict__[attr] = value
