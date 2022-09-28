@@ -64,6 +64,7 @@ isapi/src/pyISAPI_messages.h
 # Environments
 .env
 .venv
+/.senv/Lib/
 env/
 venv/
 ENV/

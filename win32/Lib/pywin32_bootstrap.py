@@ -20,7 +20,7 @@ else:
     for path in pywin32_system32.__path__:
         if os.path.isdir(path):
             if hasattr(os, "add_dll_directory"):
-                os.add_dll_directory(path)
+                h_add_dll = os.add_dll_directory(path)
             # This is to ensure the pywin32 path is in the beginning to find the
             # pywin32 DLLs first and prevent other PATH entries to shadow them
             elif not os.environ["PATH"].startswith(path):

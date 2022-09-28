@@ -3,13 +3,16 @@
 #
 
 import win32api, sys, os
-import pythoncom
 
 # flag if we are in a "frozen" build.
 _frozen = getattr(sys, "frozen", 1 == 0)
 # pythoncom dumbly defaults this to zero - we believe sys.frozen over it.
-if _frozen and not getattr(pythoncom, "frozen", 0):
-    pythoncom.frozen = sys.frozen
+if _frozen:
+    import pythoncom
+
+    if not getattr(pythoncom, "frozen", 0):
+        pythoncom.frozen = sys.frozen
+    del pythoncom
 
 # Add support for an external "COM Extensions" path.
 #  Concept is that you can register a seperate path to be used for
@@ -126,4 +129,4 @@ if "win32com.gen_py" not in sys.modules:
 gen_py = sys.modules["win32com.gen_py"]
 
 # get rid of these for module users
-del os, sys, win32api, pythoncom
+del os, sys, win32api

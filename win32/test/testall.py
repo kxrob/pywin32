@@ -121,6 +121,8 @@ def get_demo_tests():
         argv = (sys.executable, os.path.join(demo_dir, base + ".py")) + argvs.get(
             base, ()
         )
+        if testfn_filter and testfn_filter not in argv[1]:
+            continue
         ret.append(
             unittest.FunctionTestCase(
                 TestRunner(argv), description="win32/demos/" + name
@@ -176,6 +178,8 @@ def suite():
     for file in files:
         base, ext = os.path.splitext(file)
         if ext == ".py" and os.path.basename(me) != file:
+            if testfn_filter and testfn_filter not in file:
+                continue
             try:
                 mod = __import__(base)
             except:
@@ -197,6 +201,8 @@ class CustomLoader(pywin32_testutil.TestLoader):
         return self.fixupTestsForLeakTests(suite())
 
 
+testfn_filter = None
+
 if __name__ == "__main__":
     import argparse
 
@@ -207,11 +213,22 @@ if __name__ == "__main__":
         action="store_true",
         help="(This is now the default - use `-user-interaction` to include them)",
     )
-
     parser.add_argument(
         "-user-interaction",
         action="store_true",
         help="Include tests which require user interaction",
+    )
+    parser.add_argument(
+        "-f",
+        "--filter",
+        help="Set a substring as filter for test script filenames",
+    )
+    parser.add_argument(
+        # XXX unittest should better provide this consistently in future:
+        # https://github.com/python/cpython/pull/23900
+        "--dbg",
+        action="store_true",
+        help="crash on the first error for post-mortem debugging",
     )
 
     parsed_args, remains = parser.parse_known_args()
@@ -220,9 +237,12 @@ if __name__ == "__main__":
         print(
             "Note: -no-user-interaction is now the default, run with `-user-interaction` to include them."
         )
-
     no_user_interaction = not parsed_args.user_interaction
+    testfn_filter = parsed_args.filter
 
     sys.argv = [sys.argv[0]] + remains
 
-    pywin32_testutil.testmain(testLoader=CustomLoader())
+    if parsed_args.dbg:
+        suite().debug()
+    else:
+        pywin32_testutil.testmain(testLoader=CustomLoader())
