@@ -940,7 +940,7 @@ class my_install(install):
                     "-install",
                     "-destination",
                     self.install_lib,
-                    "-quiet",
+                    "-silent",
                     "-wait",
                     str(os.getpid()),
                 ]

@@ -9,15 +9,10 @@ import shutil
 import sysconfig
 import argparse
 
-try:
-    import winreg as winreg
-except:
-    import winreg
+import winreg
 
 # Send output somewhere so it can be found if necessary...
 import tempfile
-
-tee_f = open(os.path.join(tempfile.gettempdir(), "pywin32_postinstall.log"), "w")
 
 
 class Tee:
@@ -40,16 +35,6 @@ class Tee:
                 pass
         tee_f.flush()
 
-
-# For some unknown reason, when running under bdist_wininst we will start up
-# with sys.stdout as None but stderr is hooked up. This work-around allows
-# bdist_wininst to see the output we write and display it at the end of
-# the install.
-if sys.stdout is None:
-    sys.stdout = sys.stderr
-
-sys.stderr = Tee(sys.stderr)
-sys.stdout = Tee(sys.stdout)
 
 com_modules = [
     # module_name,                      class_names
@@ -155,10 +140,11 @@ def CopyTo(desc, src, dest):
                 # Running silent mode - just re-raise the error.
                 raise
             full_desc = (
+                "Copy %s -> %s\n\n"
                 "Error %s\n\n"
                 "If you have any Python applications running, "
                 "please close them now\nand select 'Retry'\n\n%s"
-                % (desc, details.strerror)
+                % (src, dest, desc, details.strerror)
             )
             rc = win32api.MessageBox(
                 0, full_desc, "Installation Error", win32con.MB_ABORTRETRYIGNORE
@@ -194,6 +180,12 @@ def LoadSystemModule(lib_dir, modname):
     spec.loader.exec_module(mod)
 
 
+rhk2name = {
+    winreg.HKEY_CURRENT_USER: "HKCU",
+    winreg.HKEY_LOCAL_MACHINE: "HKLM",
+}
+
+
 def SetPyKeyVal(key_name, value_name, value):
     root_hkey = get_root_hkey()
     root_key = winreg.OpenKey(root_hkey, root_key_name)
@@ -202,7 +194,10 @@ def SetPyKeyVal(key_name, value_name, value):
         try:
             winreg.SetValueEx(my_key, value_name, 0, winreg.REG_SZ, value)
             if verbose:
-                print("-> %s\\%s[%s]=%r" % (root_key_name, key_name, value_name, value))
+                print(
+                    "-> %s\\%s\\%s[%s]=%r"
+                    % (rhk2name[root_hkey], root_key_name, key_name, value_name, value)
+                )
         finally:
             my_key.Close()
     finally:
@@ -217,13 +212,19 @@ def UnsetPyKeyVal(key_name, value_name, delete_key=False):
         try:
             winreg.DeleteValue(my_key, value_name)
             if verbose:
-                print("-> DELETE %s\\%s[%s]" % (root_key_name, key_name, value_name))
+                print(
+                    "-> DELETE %s\\%s\\%s[%s]"
+                    % (rhk2name[root_hkey], root_key_name, key_name, value_name)
+                )
         finally:
             my_key.Close()
         if delete_key:
             winreg.DeleteKey(root_key, key_name)
             if verbose:
-                print("-> DELETE %s\\%s" % (root_key_name, key_name))
+                print(
+                    "-> DELETE %s\\%s\\%s"
+                    % (rhk2name[root_hkey], root_key_name, key_name)
+                )
     except OSError as why:
         winerror = getattr(why, "winerror", why.errno)
         if winerror != 2:  # file not found
@@ -695,6 +696,28 @@ def verify_destination(location):
 
 
 def main():
+    global tee_f
+    tee_f = open(os.path.join(tempfile.gettempdir(), "pywin32_postinstall.log"), "w")
+    _stdout = sys.stdout
+    _stderr = sys.stderr
+
+    # For some unknown reason, when running under bdist_wininst we will start up
+    # with sys.stdout as None but stderr is hooked up. This work-around allows
+    # bdist_wininst to see the output we write and display it at the end of
+    # the install.
+    if sys.stdout is None:
+        sys.stdout = sys.stderr
+
+    sys.stderr = Tee(sys.stderr)
+    sys.stdout = Tee(sys.stdout)
+    try:
+        main_plain()
+    finally:
+        sys.stdout = _stdout
+        sys.stderr = _stderr
+
+
+def main_plain():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description="""A post-install script for the pywin32 extensions.
@@ -764,6 +787,7 @@ def main():
             # child already dead
             pass
 
+    global silent, verbose
     silent = args.silent
     verbose = not args.quiet
 
